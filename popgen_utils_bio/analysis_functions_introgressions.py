@@ -43,6 +43,7 @@ import pandas
 def get_gene_from_ssearch36_perm_files(gene,genomes_to_ssearch, gene_length, dfs,debug=False):
         get_gene_from_ssearch36_perm_files(gene,genomes_to_ssearch,gene_length,dfs,permissive=True)
 
+
 def get_gene_from_ssearch36_files(gene,genomes_to_ssearch, gene_length, dfs,debug=False,permissive=False):
         genome = dfs[0]
         df = dfs[1]
