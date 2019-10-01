@@ -20,8 +20,8 @@
 
 import argparse
 
-from popgen_utils_bio import *
-
+from popgen_utils_bio.analysis_functions_introgressions import *
+import os
 # Make sure these are installed
 import pandas
 import gffpandas.gffpandas as gffpd 
@@ -40,17 +40,16 @@ def main():
     parser.add_argument("-s","--ssearch36-in", dest="ssearch_in")
     parser.add_argument("-g","--genome-in", dest="genome_in")
     parser.add_argument("-o","--output-dir",dest="output_dir")
-    parser.add_argument("-g","--gff-yeast", dest="gff_yeast", default="/media/theboocock/data/Dropbox/PHDTHESIS/projects/gal_final_github/data/annotations/saccharomyces_cerevisiae.gff")
+    parser.add_argument("--gff-yeast", dest="gff_yeast", default="/media/theboocock/data/Dropbox/PHDTHESIS/projects/gal_final_github/data/annotations/saccharomyces_cerevisiae.gff")
     args = parser.parse_args()
     ssearch36_in = args.ssearch_in 
     annot = args.gff_yeast
-    genome_in = {os.path.basename(args.genome_in),args.genome_in}
+    genome_in = args.genome_in
     output_dir = args.output_dir
-    out_prefix = os.path.basename(genome_in[0])
+    out_prefix = os.path.basename(genome_in)
     out_new_all = out_prefix.split(".ss")[0]
     
     ssearch_df = get_ssearch36(args.ssearch_in)
-
     gff_yeast = gffpd.read_gff3(annot)
     gff_yeast_annot = (gff_yeast.attributes_to_columns())
     # Extract orfs that are only Verified and genes.
@@ -58,16 +57,25 @@ def main():
     lengths = gff_yeast_annot["end"]- gff_yeast_annot["start"] + 1
     gff_yeast_annot["lengths"] = (lengths)
 
+    ssearch_in= pandas.read_csv(ssearch36_in,sep="\t", header=None)
+    (ssearch_in.columns) = ["gene","strain","percentage_match","3","4","5","ref_start","ref_end","start","end","E","11"]
+
     with open(os.path.join(output_dir,out_new_all +".strict.fasta"),"w") as out_strict:
         with open(os.path.join(output_dir,out_new_all +".permissive.fasta"),"w") as out_f:
-            for gene in pd_df_names[0]:
+            for gene in gff_yeast_annot["Name"]: 
                 gene = str(gene)
                 if(any(gff_yeast_annot["Name"].isin([gene]))):
                     gene_length = int(gff_yeast_annot[gff_yeast_annot["Name"] == gene]["lengths"])
-                    f_gene = partial(get_gene_from_ssearch36_files, gene, genome_in, gene_length)
-                    ###
-                    df = (genome_in.keys()[0], ssearch_df) 
-                    gene_out = [f_gene(df)]
+                    #f_gene = partial(get_gene_from_ssearch36_script, gene, genome_in, gene_length)
+                    gene_out = get_gene_from_ssearch36_script(genome_in,ssearch_in,gene, gene_length)
+                    #gene_out = [f_gene(df)]
+                    print(gene_out)
+                    gene_strict= gene_out[0][1]
+                    gene_perm = gene_out[1][1]
+                    if gene_strict is not None:
+                        out_strict.write(">" + gene  + "\n" + gene_strict +"\n")
+                    if gene_perm is not None:
+                        out_f.write(">" + gene  + "\n" + gene_perm +"\n")
     
 
 

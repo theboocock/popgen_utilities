@@ -43,11 +43,23 @@ import pandas
 def get_gene_from_ssearch36_perm_files(gene,genomes_to_ssearch, gene_length, dfs,debug=False):
         get_gene_from_ssearch36_perm_files(gene,genomes_to_ssearch,gene_length,dfs,permissive=True)
 
+
+def get_gene_from_ssearch36_script(fasta_file, ssearch36_in, gene, gene_length):
+    """
+        @author James Boocock
+        @date 30 sept 2019
+    """
+    row_gal_gene = (ssearch36_in[ssearch36_in["gene"] == gene])
+    fasta_file = fasta_file
+    genome = os.path.basename(fasta_file)
+    gene_strict = _get_gene_from_ssearch36_files(genome, row_gal_gene,fasta_file,gene_length,gene)
+    gene_permissive = _get_gene_from_ssearch36_files(genome, row_gal_gene,fasta_file,gene_length,gene, permissive=True)
+    return(gene_strict, gene_permissive)
+
 def get_gene_from_ssearch36_files(gene,genomes_to_ssearch, gene_length, dfs,debug=False,permissive=False):
         genome = dfs[0]
         df = dfs[1]
         GENOMES_DIR= "/media/theboocock/data/PHDTHESIS/projects/gal_final_github/data/genomes//"
-        rev_strand =False
         try:
             (dfs[2])
             fasta_file= dfs[2] 
@@ -59,6 +71,10 @@ def get_gene_from_ssearch36_files(gene,genomes_to_ssearch, gene_length, dfs,debu
             print(row_gal_gene)
         #print(row_gal_gene)
         #print(row_gal_gene)
+        _get_gene_from_ssearch36_files(genome, row_gal_gene,fasta_file,gene_length,gene)
+
+def _get_gene_from_ssearch36_files(genome, row_gal_gene,fasta_file,gene_length,gene,debug=False,permissive=False, alignment_fraction=0.9):
+        rev_strand =False
         if (row_gal_gene.shape[0] == 0):
             return(genome, None)
         row_gal_gene = row_gal_gene.sort_values(by="11", ascending=False).head(n=1)
@@ -80,7 +96,7 @@ def get_gene_from_ssearch36_files(gene,genomes_to_ssearch, gene_length, dfs,debu
         contig = str(row_gal_gene["strain"].astype(str)).split()[1]
         length_alignment = (abs(end -start) + 1)
         #print(length_alignment)
-        if (float(length) *.9) <= length_alignment:
+        if (float(length) * alignment_fraction) <= length_alignment:
             old_start = start
             start_offset = ref_start - 1
             # exclusive
@@ -111,6 +127,7 @@ def get_gene_from_ssearch36_files(gene,genomes_to_ssearch, gene_length, dfs,debu
           #      print(start)
          #   #print(gene)
             #print(length)
+            # Get this weird alignment working...
             if gene == "YKL127W" and length == 1715:
                 if rev_strand:
                     seq = (extract_gene_from_alignment(fasta_file, contig,old_start,length-2)).decode("utf-8").strip()
