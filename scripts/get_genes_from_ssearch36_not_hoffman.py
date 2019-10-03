@@ -69,6 +69,7 @@ def main():
                     #f_gene = partial(get_gene_from_ssearch36_script, gene, genome_in, gene_length)
                     gene_out = get_gene_from_ssearch36_script(genome_in,ssearch_in,gene, gene_length)
                     #gene_out = [f_gene(df)]
+                    print(gene_out)
                     gene_strict= gene_out[0][1]
                     gene_perm = gene_out[1][1]
                     if gene_strict is not None:

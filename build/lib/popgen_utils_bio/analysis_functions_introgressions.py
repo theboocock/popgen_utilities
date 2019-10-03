@@ -161,7 +161,7 @@ def _get_gene_from_ssearch36_files(genome, row_gal_gene,fasta_file,gene_length,g
 
 import subprocess
 def extract_gene_from_alignment(fasta_query,contig,start,length):
-    cmd="""cat {0} | bioawk -c fastx '{{if($name=="{1}"){{print substr($seq,{2},{3}) }}}}' """.format(fasta_query,contig, start,length) 
+    cmd="""cat {0} | /u/home/s/smilefre/bin/bioawk -c fastx '{{if($name=="{1}"){{print substr($seq,{2},{3}) }}}}' """.format(fasta_query,contig, start,length) 
     output_gene = subprocess.check_output(cmd, shell=True)
     return(output_gene) 
 def get_gene_alias(gene, gene_names):
@@ -286,7 +286,7 @@ def get_ygob_genes(og_name, genes, input_fasta,input_tab):
 def get_gene_fasta_alignment(genes, input_strains, output_dir = "data/fasta_output", window =0,
                             promoter = False):
         tmp_out_gene = tempfile.NamedTemporaryFile(delete=False)
-        cmd="""cat {0} | bioawk -c fastx '{{if($name=="{1}"){{print ">"$name"\\n"$seq}}}}' """.format(fasta_query,gene)
+        cmd="""cat {0} | /u/home/s/smilefre/bin/bioawk -c fastx '{{if($name=="{1}"){{print ">"$name"\\n"$seq}}}}' """.format(fasta_query,gene)
         output_gene = subprocess.check_output(cmd, shell=True)
         tmp_out_gene.write(output_gene)
         tmp_out_gene.close()
@@ -415,7 +415,7 @@ def create_fasta_outputs(genes = ["YLR081W","YBR018C","YBR019C","YBR020W"],
         out_group_fasta_file = pyfasta.Fasta(out_group_fasta)
     for gene in genes:
         tmp_out_gene = tempfile.NamedTemporaryFile(delete=False)
-        cmd="""cat {0} | bioawk -c fastx '{{if($name=="{1}"){{print ">"$name"\\n"$seq}}}}' """.format(fasta_query,gene)
+        cmd="""cat {0} | /u/home/s/smilefre/bioawk -c fastx '{{if($name=="{1}"){{print ">"$name"\\n"$seq}}}}' """.format(fasta_query,gene)
         output_gene = subprocess.check_output(cmd, shell=True)
         tmp_out_gene.write(output_gene)
         tmp_out_gene.close()
