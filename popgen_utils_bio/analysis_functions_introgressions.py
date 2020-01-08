@@ -34,11 +34,8 @@ def _genes_to_names():
             gene_names[gene] = alias
     return(gene_names)
 
-
-
 import os
 import pandas
-
 
 def get_gene_from_ssearch36_perm_files(gene,genomes_to_ssearch, gene_length, dfs,debug=False):
         get_gene_from_ssearch36_perm_files(gene,genomes_to_ssearch,gene_length,dfs,permissive=True)
@@ -471,6 +468,7 @@ def create_fasta_outputs(genes = ["YLR081W","YBR018C","YBR019C","YBR020W"],
 import pyfasta
 
 from Bio.Alphabet import IUPAC
+from Bio.Data.IUPACData  import ambiguous_dna_values 
 #from Bio.Seq import Seq
 from Bio.SeqRecord import SeqRecord
 from Bio.Align import MultipleSeqAlignment
@@ -1095,9 +1093,10 @@ def get_dn_ds_windowed_alignments(fasta_input_list,window=100,step=50,output_fol
             dm = calculator.get_distance(dna_alignment)
             # Make sure the last step includes the final parts of the alignment. We have a 3' flanking reverse gene here.
 
-def _get_protein_hash():
+
+def _get_hash_from_fasta(fasta):
     s288c_protein_hash = {}
-    with open("/media/theboocock/data/PHDTHESIS/Single-CellRNASEQ/eqtls/ref_data/yeast/genes/orf_coding_all.fasta") as fasta_in:
+    with open(fasta) as fasta_in:
         tmp_line = fasta_in.readline()
         i = 1
         while(tmp_line):
@@ -1109,6 +1108,11 @@ def _get_protein_hash():
                 tmp_line = fasta_in.readline().strip()
             s288c_protein_hash[name] = seq
             i = i  + 1
+    return(s288c_protein_hash)
+
+
+def _get_protein_hash():
+    s288c_protein_hash = _get_hash_from_fasta("/u/home/s/smilefre/project-kruglyak/ref/orf_coding_all.fasta") 
     return(s288c_protein_hash)
 
 def _get_bam_hash():
@@ -1203,7 +1207,7 @@ def windowed_divergence(alignment, do_window=False, window=100, fasta_reference=
 
 
 
-def get_dn_ds_from_alignment(alignment,do_window=False, window=100, step=10,method="NG86", these_samples=None, gene_name="YBR018C",cbs_reference=False, distance_only=False):
+def get_dn_ds_from_alignment(alignment,do_window=False, window=100, step=10,method="NG86", these_samples=None, gene_name="YBR018C",cbs_reference=False, distance_only=False,hoffman=False):
     if not cbs_reference:
         s288c_protein_hash = _get_protein_hash()
     else:
@@ -1216,8 +1220,12 @@ def get_dn_ds_from_alignment(alignment,do_window=False, window=100, step=10,meth
         reference_gene = s288c_protein_hash[gene_name] 
     except:
         return None
+    try:
+        os.mkdir("tmp3/")
+    except:
+        pass
     import tempfile
-    temp = tempfile.NamedTemporaryFile(dir="/media/theboocock/data/PHDTHESIS/projects/gal_final_github/popgen_phylo_notebooks/tmp3/",delete=False)
+    temp = tempfile.NamedTemporaryFile(dir="tmp3/",delete=False)
 
     #from_input= str(item)
     
@@ -1227,15 +1235,21 @@ def get_dn_ds_from_alignment(alignment,do_window=False, window=100, step=10,meth
         for key, item in gal7_sliding_window.items():
             if key in these_samples:
                 tmp_fasta.write(">" + key + "\n")
-                tmp_fasta.write(str(item) + "\n")
+                item = str(item).upper()
+                seq_list = (extend_ambiguous_dna((item)))
+                seq = random.choice(seq_list)
+                tmp_fasta.write(seq + "\n")
     import uuid
     output_filename= os.path.join("tmp3/",str(uuid.uuid4()))
     muscle_cline = ClustalOmegaCommandline(infile=temp.name, outfile=output_filename, force=True, outfmt="clu")
+    if hoffman:
+        muscle_cline = "/u/project/kruglyak/smilefre/anaconda3/bin/"+ str(muscle_cline)
     subprocess.check_call(str(muscle_cline),shell=True) 
     alignments  = AlignIO.read(output_filename,'clustal',alphabet=IUPAC.IUPACUnambiguousDNA())
     calculator = DistanceCalculator('identity')
     dm = calculator.get_distance(alignments)
     #proteins =
+    #sys.exit(1)
     os.remove(temp.name)
     os.remove(output_filename)
     if distance_only:
@@ -1258,6 +1272,8 @@ def get_dn_ds_from_alignment(alignment,do_window=False, window=100, step=10,meth
                 return(None)
             dn_ds_list[alignment.id] = []
             dna_cheese_sample = SeqRecord(Seq.Seq(tmp_alignment, alphabet=IUPAC.IUPACUnambiguousDNA()), id=alignment.id)
+            if not str(dna_cheese_sample.seq).startswith("ATG"):
+                return(None)
             seq_cbs = dna_cheese_sample
             i=0
             j=0
@@ -1265,6 +1281,7 @@ def get_dn_ds_from_alignment(alignment,do_window=False, window=100, step=10,meth
             if(len(str(test)) % 3 != 0):
                 return None
             prot_cheese_sample = SeqRecord(test.translate(to_stop=True),id=alignment.id)
+            #print(test)
             input_filename= os.path.join("tmp3/",str(uuid.uuid4()))
             output_filename= os.path.join("tmp3/",str(uuid.uuid4()))
             with open(input_filename, "w") as tmp_fasta:
@@ -1275,13 +1292,15 @@ def get_dn_ds_from_alignment(alignment,do_window=False, window=100, step=10,meth
             in_file = input_filename 
             out_file = output_filename 
             muscle_cline = ClustalOmegaCommandline(infile=in_file, outfile=out_file,force=True,outfmt="clu")
+            if hoffman:
+                muscle_cline = "/u/project/kruglyak/smilefre/anaconda3/bin/"+ str(muscle_cline)
             subprocess.check_call(str(muscle_cline),shell=True)
             proteins = AlignIO.read(out_file,'clustal',alphabet=IUPAC.protein)
             os.remove(input_filename)
             os.remove(output_filename)
             prot_start1 = str(proteins[0].seq)
             prot_start2 = str(proteins[1].seq)
-            dna_start1 = str(dna_cheese_sample.seq)
+            dna_start1 = str(test)
             dna_start2 = str(ref_translate.seq)
             #print(len(dna_start1))
             #print(len(dna_start2))
@@ -1336,17 +1355,22 @@ def get_dn_ds_from_alignment(alignment,do_window=False, window=100, step=10,meth
             out_file= "tmp3/"+ str(uuid.uuid4())
             #out_file = "tmp3/" +name +".out.fasta" 
             muscle_cline = ClustalOmegaCommandline(infile=in_file, outfile=out_file,force=True,outfmt="clu")
+            if hoffman:
+                muscle_cline = "/u/project/kruglyak/smilefre/anaconda3/bin/"+ str(muscle_cline)
             subprocess.check_call(str(muscle_cline),shell=True)
             dna = AlignIO.read(out_file,'clustal',alphabet=IUPAC.IUPACUnambiguousDNA())
             proteins[0].seq = Seq.Seq(prot_start1, alphabet=IUPAC.IUPACProtein()) 
             proteins[1].seq = Seq.Seq(prot_start2, alphabet=IUPAC.IUPACProtein()) 
             try:
                 codon_aln = codonalign.build(proteins,[dna[0], dna[1]], alphabet=codonalign.default_codon_alphabet)
-            except ValueError:
+            except:
                 os.remove(out_file)
                 os.remove(in_file)
-                return(None)   
-            dn_ds_all =  (codonalign.codonseq.cal_dn_ds(codon_aln[0],codon_aln[1],method=method))
+                return(None)  
+            try:
+                dn_ds_all =  (codonalign.codonseq.cal_dn_ds(codon_aln[0],codon_aln[1],method=method))
+            except:
+                return(None)
             os.remove(in_file)
             os.remove(out_file)
             if do_window:
@@ -1362,7 +1386,7 @@ def get_dn_ds_from_alignment(alignment,do_window=False, window=100, step=10,meth
                         in_var  = False 
                     prot_cbs = seq_cbs.seq.translate(to_stop=True)
                     prot_by = seq_by.seq.translate(to_stop=True)
-                    if(len(prot_cbs) == 0 or len(prot_by) == 0):
+                    if(len(prot_cbs) <= 100 or len(prot_by) <= 100):
                         break
                     #print(tmp_seq_cbs)
                     j = j + window * 3
@@ -1379,15 +1403,22 @@ def get_dn_ds_from_alignment(alignment,do_window=False, window=100, step=10,meth
                     in_file = input_filename 
                     out_file = output_filename 
                     muscle_cline = ClustalOmegaCommandline(infile=in_file, outfile=out_file,force=True,outfmt="clu")
+                    if hoffman:
+                        muscle_cline = "/u/project/kruglyak/smilefre/anaconda3/bin/"+ str(muscle_cline)
                     subprocess.check_call(str(muscle_cline),shell=True)
                     proteins = AlignIO.read(out_file,'clustal',alphabet=IUPAC.protein)
                     try:
                         codon_aln = codonalign.build(proteins,[seq_cbs, seq_by], alphabet=codonalign.default_codon_alphabet)
-                    except ValueError:
+                    except:
                         os.remove(out_file)
                         os.remove(in_file)
-                        return(None)    
-                    ds =  (codonalign.codonseq.cal_dn_ds(codon_aln[0],codon_aln[1],method=method))
+                        dn_ds_list[alignment.id].append(("NA","NA"))
+                        continue
+                    try:
+                        ds =  (codonalign.codonseq.cal_dn_ds(codon_aln[0],codon_aln[1],method=method))
+                    except:
+                        dn_ds_list[alignment.id].append(("NA","NA"))
+                        continue
                     if ds[1] == -1 or ds[1] > 3.23:
                         ds= (ds[0], 3.23)
                     dn_ds_list[alignment.id].append(ds)
@@ -1421,7 +1452,10 @@ def get_dn_ds_from_alignment(alignment,do_window=False, window=100, step=10,meth
                     in_file = input_filename 
                     out_file = output_filename 
                     muscle_cline = ClustalOmegaCommandline(infile=in_file, outfile=out_file,force=True,outfmt="clu")
+                    if hoffman:
+                        muscle_cline = "/u/project/kruglyak/smilefre/anaconda3/bin/"+ str(muscle_cline)
                     subprocess.check_call(str(muscle_cline),shell=True)
+
                     proteins = AlignIO.read(out_file,'clustal',alphabet=IUPAC.protein)
                     try:
                         codon_aln = codonalign.build(proteins,[seq_cbs, seq_by], alphabet=codonalign.default_codon_alphabet)
@@ -1442,6 +1476,7 @@ def get_dn_ds_from_alignment(alignment,do_window=False, window=100, step=10,meth
             else:
                 align = MultipleSeqAlignment([prot_cheese_sample, ref_protein])
                 #print(ref_protein)
+
                 #print(prot_cheese_sample)
                 codon_aln = codonalign.build(align ,[dna_cheese_sample , ref_translate], alphabet=codonalign.default_codon_alphabet)
                 dn_ds_list[alignment.id]=  (codonalign.codonseq.cal_dn_ds(codon_aln[0],codon_aln[1],method=method))

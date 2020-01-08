@@ -12,13 +12,14 @@ def load_ssearch36_inputs(ssearch_in):
     pandas_in = pandas.read_csv(ssearch_in,sep="\t", header=None)
     (pandas_in.columns) = ["gene","strain","percentage_match","3","4","5","ref_start","ref_end","start","end","E","11"]
     return(os.path.basename(ssearch_in), pandas_in)
-
+import re
 
 def process_ssearch36_df(name, ssearch_df, fasta_inputs, out_dir):
     """
         Process ssearch36 files second time mapping. 
     """
-    fasta_in = [x for x in fasta_inputs if name.split(".fasta.remap.ss")[0] == os.path.basename(x).split(".fasta")[0]][0]
+
+    fasta_in = [x for x in fasta_inputs if name.split(".fasta.ss")[0] == re.sub(".fasta$","",os.path.basename(x))][0]
     fasta_file = pyfasta.Fasta(fasta_in)
     print(name) 
     try:
