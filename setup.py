@@ -6,5 +6,5 @@ setup(name='popgen_utils',
       author='James Boocock',
       author_email='theboocock@ucla.edu',
       url='',
-      packages=['popgen_utils_bio'],
+      packages=['popgen_utils_bio','popgen_utils_bio2'],
      )

@@ -19,7 +19,7 @@
 # CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
 
 import argparse
-from popgen_utils_bio.analysis_functions_introgressions import get_dn_ds_from_alignment
+from popgen_utils_bio2.analysis_functions_introgressions import get_dn_ds_from_alignment
 import pyfasta
 from collections import OrderedDict
 

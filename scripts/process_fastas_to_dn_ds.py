@@ -19,7 +19,7 @@
 # CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
 
 import argparse
-from popgen_utils_bio.analysis_functions_introgressions import get_dn_ds_from_alignment
+from popgen_utils_bio2.analysis_functions_introgressions import get_dn_ds_from_alignment
 import pyfasta
 from collections import OrderedDict
 
@@ -58,6 +58,7 @@ def get_dn_ds_from_fasta(input_fasta, output_prefix, window, step):
         #    for line in out_f_old:
         #        out_f.write(line)
         for gene in genes:
+            print(gene)
             out_ds =  get_dn_ds_from_alignment(input_fasta,these_samples=[gene],do_window=True,gene_name=gene,cbs_reference=False,window=window,step=step, hoffman=True)
             if out_ds is not None:
                 rows = out_ds 
@@ -69,7 +70,7 @@ def get_dn_ds_from_fasta(input_fasta, output_prefix, window, step):
 def main():
     parser = argparse.ArgumentParser(description="Calculate dn/ds from ssearch36 outputs")
     parser.add_argument("-o","--output-prefix", dest="output_prefix", help="Output prefix")
-    parser.add_argument("-w","--window", dest="Window", default=200, help="Window size for dn ds")
+    parser.add_argument("-w","--window", dest="window", default=200, help="Window size for dn ds")
     parser.add_argument("-s","--step", dest="step", default=10, help="Step size for dn ds")
     parser.add_argument("input_fasta", help="input fasta file")
     args = parser.parse_args()
